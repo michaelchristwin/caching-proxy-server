@@ -44,7 +44,7 @@ func SetupRoutes(origin string) *chi.Mux {
 			return
 		}
 
-		resp, err := http.Get(origin)
+		resp, err := http.Get(origin + key)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
