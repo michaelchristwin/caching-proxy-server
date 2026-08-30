@@ -2,30 +2,28 @@ package main
 
 import (
 	"context"
-	"flag"
+
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
-	"caching-proxy/internal/routes"
+	"caching-proxy/internal/config"
 )
 
 func run(ctx context.Context, w io.Writer) error {
-	serverPort := flag.Int("port", 0, "port number")
-	origin := flag.String("origin", "", "origin")
-	flag.Parse()
+	cfg := config.Load()
+
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
-	r := routes.SetupRoutes(*origin)
+	router := SetupRoutes()
 
 	srv := &http.Server{
-		Addr:    ":" + strconv.Itoa(*serverPort),
-		Handler: r,
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: router,
 	}
 
 	errCh := make(chan error, 1)
