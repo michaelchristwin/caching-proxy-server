@@ -1,6 +1,7 @@
 package main
 
 import (
+	"caching-proxy/internal/handler"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -23,12 +24,17 @@ var cache = struct {
 }
 
 func SetupRoutes() *chi.Mux {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
-	return r
+	simaHandler := handler.NewSimaHandler()
+	simaRouter := simaHandler.RegisterRoutes()
+	router.Route("/api/v1", func(r chi.Router) {
+		r.Mount("/sima", simaRouter)
+	})
+	return router
 }
