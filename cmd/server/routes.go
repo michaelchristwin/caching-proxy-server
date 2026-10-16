@@ -1,10 +1,15 @@
 package main
 
 import (
-	"caching-proxy/internal/handler"
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"os"
 	"sync"
+	"time"
+
+	"caching-proxy/internal/handler"
+	internal_middleware "caching-proxy/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -25,7 +30,18 @@ var cache = struct {
 
 func SetupRoutes() *chi.Mux {
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey && len(groups) == 0 {
+				a.Value = slog.StringValue(a.Value.Time().UTC().Format(time.RFC3339))
+			}
+			return a
+		},
+	}))
+	router.Use(middleware.RealIP)
+	router.Use(middleware.RequestID)
+	router.Use(internal_middleware.Logger(logger))
+	router.Use(middleware.Recoverer)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
